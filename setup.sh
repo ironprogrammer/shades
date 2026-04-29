@@ -149,8 +149,9 @@ else
   warn "SCHOOL_CALENDAR_ICS_URL not set — skipping calendar cache"
 fi
 
-echo "Fetching weather..."
-$PYTHON -c "
+if [ -n "$WEATHER_LAT" ] && [ -n "$WEATHER_LON" ]; then
+  echo "Fetching weather..."
+  $PYTHON -c "
 import os, sys
 sys.path.insert(0, '$SCRIPT_DIR')
 from dotenv import load_dotenv
@@ -160,6 +161,9 @@ from weather import get_weather
 w = get_weather(os.environ['WEATHER_LAT'], os.environ['WEATHER_LON'])
 print(f\"  Today's high: {w['high_f']}° — Sunset: {w['sunset'].strftime('%I:%M %p')}\")
 " && ok "Weather cached" || warn "Weather fetch failed — check WEATHER_LAT/LON in .env"
+else
+  warn "WEATHER_LAT/WEATHER_LON not set — skipping weather cache"
+fi
 
 
 # ── 6. Done ───────────────────────────────────────────────────────────────────
