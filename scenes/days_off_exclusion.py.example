@@ -1,14 +1,15 @@
 SCHEDULE = {
     "enabled": True,
-    "time": "07:45",
+    "time": "07:30",
     "days": ["mon", "tue", "wed", "thu", "fri"],
 }
 
-SHADES = ["Your Shade Name 1", "Your Shade Name 2"]
+SHADES = ["Your Shade Name"]
 POSITION = 0  # fully open
 
 
 def should_run(ctx):
+    # skips holidays, school breaks, and summer — requires SCHOOL_CALENDAR_ICS_URL in .env
     return ctx["is_school_day"]
 
 

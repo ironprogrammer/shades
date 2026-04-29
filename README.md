@@ -59,9 +59,25 @@ Index from `shade list` is based on hub registration order and is stable between
 
 The scheduler loads every `.py` file in `scenes/` automatically. Each scene declares its own schedule and conditions — no changes to the scheduler needed when adding scenes.
 
+`scenes/*.py` files are gitignored — your personal scenes (with real shade names) stay local.
+
+**Getting started** — copy an example scene and fill in your shade names:
+
+```bash
+cp scenes/weekday_schedule.py.example scenes/my_morning.py
+```
+
+Three examples are included, each demonstrating a key feature:
+
+| Example | Feature |
+|---------|---------|
+| `weekday_schedule.py.example` | Basic timed weekday trigger |
+| `weather_restriction.py.example` | Only runs when today's high exceeds a threshold |
+| `days_off_exclusion.py.example` | Skips holidays, breaks, and summer via school calendar |
+
 **Disable a scene** without deleting it: set `"enabled": False` in its `SCHEDULE`.
 
-**Add a scene** — create `scenes/your_scene.py`:
+**Scene structure** — `scenes/your_scene.py`:
 
 ```python
 SCHEDULE = {

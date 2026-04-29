@@ -4,9 +4,9 @@ SCHEDULE = {
     "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
 }
 
-SHADES = ["Your Shade Name 1", "Your Shade Name 2"]
-POSITION = 88  # 22% open
-TEMP_THRESHOLD = 60  # matches TEMP_UNIT in .env (currently fahrenheit)
+SHADES = ["Your Shade Name"]
+POSITION = 88  # 22% open — blocks direct sun
+TEMP_THRESHOLD = 75  # only run when today's high exceeds this (matches TEMP_UNIT in .env)
 
 
 def should_run(ctx):

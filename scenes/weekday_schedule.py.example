@@ -4,12 +4,12 @@ SCHEDULE = {
     "days": ["mon", "tue", "wed", "thu", "fri"],
 }
 
-SHADES = ["Your Shade Name 1", "Your Shade Name 2"]
-POSITION = 88  # 22% open
+SHADES = ["Your Shade Name"]
+POSITION = 0  # 0 = open, 100 = closed
 
 
 def should_run(ctx):
-    return ctx["is_school_day"]
+    return True
 
 
 async def run(hub):
