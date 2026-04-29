@@ -1,0 +1,8 @@
+.env
+*.log
+*.pyc
+*_cache.json
+scheduler_state.json
+__pycache__/
+.pytest_cache/
+.DS_Store

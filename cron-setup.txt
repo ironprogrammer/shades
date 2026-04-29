@@ -1,0 +1,99 @@
+CRON SETUP — shades automation
+================================
+
+Two separate cron jobs:
+  A) shade battery --send  — weekly battery alert (Saturday 8 AM)
+  B) scheduler.py  — scene orchestrator (every 5 min, 7 AM–8:55 PM)
+
+
+PREREQUISITES
+-------------
+Find your Python path:
+    which python3
+
+macOS note: cron may need Full Disk Access to run scripts.
+If jobs silently fail:
+  System Settings → Privacy & Security → Full Disk Access → add /usr/sbin/cron
+
+
+ADDING THE CRONS
+----------------
+    crontab -e
+
+Paste both lines (adjust paths and python as needed):
+
+  # Shade battery check — every Saturday at 8:00 AM
+  0 8 * * 6 /usr/bin/python3 /path/to/shades/shade.py battery --send >> /path/to/shades/shade.log 2>&1
+
+  # Scene scheduler — every 5 min, 7 AM to 8:55 PM
+  */5 7-20 * * * /usr/bin/python3 /path/to/shades/scheduler.py >> /path/to/shades/scheduler.log 2>&1
+
+
+REMOVING A CRON JOB
+--------------------
+    crontab -e
+
+Delete the line for the job you want to remove, save, and exit.
+Verify with:
+    crontab -l
+
+
+DISABLING A SCENE (without touching cron)
+------------------------------------------
+Edit the scene file and set:
+    "enabled": False
+
+The scheduler will skip it automatically. Re-enable by setting True.
+
+
+CHECKING LOGS
+-------------
+    tail -f /path/to/shades/shade.log
+    tail -f /path/to/shades/scheduler.log
+
+
+VERIFYING THE SETUP
+-------------------
+Battery check (no email):
+    shade battery
+
+Test email delivery (requires email vars in .env):
+    shade battery --send
+
+Inspect school calendar cache:
+    python3 /path/to/shades/school_calendar.py
+
+List active crons:
+    crontab -l
+
+
+OPTIONAL: launchd instead of cron (more reliable on macOS for scheduler)
+-------------------------------------------------------------------------
+Create ~/Library/LaunchAgents/com.yourname.shade-scheduler.plist:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.yourname.shade-scheduler</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/path/to/shades/scheduler.py</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>300</integer>
+  <key>StandardOutPath</key>
+  <string>/path/to/shades/scheduler.log</string>
+  <key>StandardErrorPath</key>
+  <string>/path/to/shades/scheduler.log</string>
+</dict>
+</plist>
+
+Load:   launchctl load ~/Library/LaunchAgents/com.yourname.shade-scheduler.plist
+Unload: launchctl unload ~/Library/LaunchAgents/com.yourname.shade-scheduler.plist
+
+Note: StartInterval=300 runs every 5 minutes regardless of hour.
+To restrict to 7 AM–8 PM, use cron instead (it supports hour ranges).
