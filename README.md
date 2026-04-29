@@ -1,6 +1,13 @@
-# shades
+# shades <img width="200" height="200" alt="doge shades" src="https://github.com/user-attachments/assets/7bbc7bde-ff03-4331-854b-48497a322bf8" />
 
 Rollease Acmeda Pulse v2 automation for macOS — battery monitoring and scene-based shade control.
+
+## Features
+
+- `shade` CLI for direct control and battery level check for installed shades
+- custom scene scheduling (e.g. open bedroom shades at 7 AM)
+- "today's high" weather detection for better light/temperature control
+- holidays/days off/vacation detection to silence applicable scenes
 
 ## Requirements
 
@@ -77,9 +84,9 @@ async def run(hub):
     await move_shade(hub, "Your Shade Name", 50)  # 0 = open, 100 = closed
 ```
 
-## School calendar
+## School/holidays calendar
 
-`school_calendar.py` fetches your district's iCal feed (configured via `SCHOOL_CALENDAR_ICS_URL` in `.env`) and caches it locally for 7 days.
+`school_calendar.py` fetches your district's (or arbitrary) iCal feed (configured via `SCHOOL_CALENDAR_ICS_URL` in `.env`) and caches it locally for 7 days.
 
 **How days off are detected:** events whose summary contains any of these strings (case-insensitive) are treated as no-school days:
 
@@ -100,7 +107,7 @@ python3 school_calendar.py
 
 ## Acknowledgements
 
-Hub communication is built on [aiopulse2](https://github.com/sillyfrog/aiopulse2) by [sillyfrog](https://github.com/sillyfrog), which also served as inspiration for early hub interaction patterns in this project.
+Hub communication is built on [aiopulse2](https://github.com/sillyfrog/aiopulse2), which also served as inspiration for early hub interaction patterns in this project.
 
 ## Weather
 
