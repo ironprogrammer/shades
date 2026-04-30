@@ -8,6 +8,8 @@ from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from astral import LocationInfo
+from astral.sun import sun
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent / ".env")
@@ -19,7 +21,7 @@ RETRY_ATTEMPTS = 3
 API_URL = (
     "https://api.open-meteo.com/v1/forecast"
     "?latitude={lat}&longitude={lon}"
-    "&daily=temperature_2m_max,sunset"
+    "&daily=temperature_2m_max"
     "&temperature_unit={temp_unit}"
     "&timezone={tz}"
     "&forecast_days={days}"
@@ -36,15 +38,12 @@ def _fetch(lat, lon):
     with urllib.request.urlopen(url, timeout=10) as resp:
         data = json.loads(resp.read())
 
-    days = {}
-    for iso_date, high_f, sunset_str in zip(
-        data["daily"]["time"],
-        data["daily"]["temperature_2m_max"],
-        data["daily"]["sunset"],
-    ):
-        sunset = datetime.fromisoformat(sunset_str).replace(tzinfo=TZ)
-        days[iso_date] = {"high_f": high_f, "sunset_iso": sunset.isoformat()}
-    return days
+    return {
+        iso_date: {"high_f": high_f}
+        for iso_date, high_f in zip(
+            data["daily"]["time"], data["daily"]["temperature_2m_max"]
+        )
+    }
 
 
 def _fetch_with_retry(lat, lon):
@@ -61,26 +60,27 @@ def _fetch_with_retry(lat, lon):
     raise last_exc
 
 
-def _format(day):
-    return {
-        "high_f": day["high_f"],
-        "sunset": datetime.fromisoformat(day["sunset_iso"]),
-    }
+def _compute_sunset(lat, lon, d):
+    loc = LocationInfo(latitude=float(lat), longitude=float(lon), timezone=str(TZ))
+    return sun(loc.observer, date=d, tzinfo=loc.timezone)["sunset"]
 
 
 def get_weather(lat, lon):
-    today = date.today().isoformat()
+    today = date.today()
+    today_iso = today.isoformat()
     cache = json.loads(CACHE_FILE.read_text()) if CACHE_FILE.exists() else None
 
-    if cache and cache.get("fetched_at") == today and today in cache.get("days", {}):
-        return _format(cache["days"][today])
+    sunset = _compute_sunset(lat, lon, today)
+
+    if cache and cache.get("fetched_at") == today_iso and today_iso in cache.get("days", {}):
+        return {"high_f": cache["days"][today_iso]["high_f"], "sunset": sunset}
 
     try:
         days = _fetch_with_retry(lat, lon)
-        CACHE_FILE.write_text(json.dumps({"fetched_at": today, "days": days}, indent=2))
-        return _format(days[today])
+        CACHE_FILE.write_text(json.dumps({"fetched_at": today_iso, "days": days}, indent=2))
+        return {"high_f": days[today_iso]["high_f"], "sunset": sunset}
     except Exception as exc:
-        if cache and today in cache.get("days", {}):
+        if cache and today_iso in cache.get("days", {}):
             print(f"  weather fetch failed ({exc}); falling back to cached forecast from {cache.get('fetched_at')}")
-            return _format(cache["days"][today])
+            return {"high_f": cache["days"][today_iso]["high_f"], "sunset": sunset}
         raise

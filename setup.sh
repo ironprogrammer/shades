@@ -36,8 +36,8 @@ ok "Python: $PY_VER ($PYTHON)"
 echo ""
 echo "Installing dependencies..."
 $PYTHON -m pip install --quiet --break-system-packages \
-  aiopulse2 resend python-dotenv icalendar pytest 2>/dev/null \
-  || $PYTHON -m pip install --quiet aiopulse2 resend python-dotenv icalendar pytest
+  aiopulse2 resend python-dotenv icalendar astral pytest 2>/dev/null \
+  || $PYTHON -m pip install --quiet aiopulse2 resend python-dotenv icalendar astral pytest
 ok "Dependencies installed"
 
 
