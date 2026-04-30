@@ -5,6 +5,7 @@ shade — CLI for Rollease Acmeda shade control.
 Usage:
   shade list                    # list all shades with index and current position
   shade scenes                  # list all scenes with schedule and today's status
+  shade scenes <scene_name>     # activate a scene now (ignores time/date gates)
   shade battery                 # check battery levels (no email)
   shade battery --send          # check and email if any shade is below threshold
   shade <name|index> open       # move to fully open (0%)
@@ -293,6 +294,74 @@ def cmd_scenes():
     print()
 
 
+def _activation_context():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    TZ = ZoneInfo(os.environ["TIMEZONE"])
+    now = datetime.now(TZ)
+    weather = {}
+    is_school_day = True
+    try:
+        from weather import get_weather
+        weather = get_weather(os.environ.get("WEATHER_LAT", "0"), os.environ.get("WEATHER_LON", "0"))
+    except Exception:
+        pass
+    try:
+        from school_calendar import get_calendar, is_school_day as _is_school_day
+        is_school_day = _is_school_day(get_calendar(), now.date())
+    except Exception:
+        pass
+    return {
+        "now": now,
+        "is_dst": bool(now.dst()),
+        "weather": weather,
+        "is_school_day": is_school_day,
+    }
+
+
+def _load_scene(name):
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).parent / "scenes" / f"{name}.py"
+    if not path.exists():
+        return None
+    spec = importlib.util.spec_from_file_location(path.stem, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+async def cmd_run_scene(hub, name):
+    import json
+    from datetime import date
+    from pathlib import Path
+
+    mod = _load_scene(name)
+    if mod is None:
+        print(f"No scene named '{name}'. Run 'shade scenes' to see available scenes.")
+        return
+
+    ctx = _activation_context()
+    try:
+        mod.should_run(ctx)
+    except Exception as exc:
+        print(f"  WARNING: should_run() raised: {exc}")
+
+    print(f"Running scene: {name}")
+    try:
+        await mod.run(hub)
+    except Exception as exc:
+        print(f"  ERROR: {exc}")
+        return
+
+    state_file = Path(__file__).parent / "scheduler_state.json"
+    state = json.loads(state_file.read_text()) if state_file.exists() else {}
+    state[name] = date.today().isoformat()
+    state_file.write_text(json.dumps(state, indent=2))
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def parse_position(arg):
@@ -324,8 +393,17 @@ async def main():
         return
 
     if args[0] == "scenes":
-        cmd_scenes()
-        return
+        if len(args) == 1:
+            cmd_scenes()
+            return
+        if len(args) == 2:
+            if not HUB_IP:
+                print("Error: HUB_IP is not set. Add it to your .env file.")
+                sys.exit(1)
+            scene_name = args[1]
+            await with_hub(lambda hub: cmd_run_scene(hub, scene_name))
+            return
+        usage()
 
     if not HUB_IP:
         print("Error: HUB_IP is not set. Add it to your .env file.")
