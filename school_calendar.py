@@ -5,6 +5,7 @@ Extracts no-school dates and school year start/end for use by the scheduler.
 """
 import json
 import os
+import time
 import urllib.request
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -17,6 +18,7 @@ load_dotenv(Path(__file__).parent / ".env")
 CACHE_FILE = Path(__file__).parent / "school_calendar_cache.json"
 ICS_URL = os.environ["SCHOOL_CALENDAR_ICS_URL"]
 CACHE_DAYS = 7
+RETRY_ATTEMPTS = 3
 
 # Event summaries containing any of these strings (case-insensitive) are
 # treated as no-school days. Expand this list to match your district's wording.
@@ -39,10 +41,24 @@ def _expand_dates(start, end):
     return dates
 
 
-def _fetch_and_parse():
+def _fetch_ics():
     req = urllib.request.Request(ICS_URL, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        content = resp.read()
+    last_exc = None
+    for attempt in range(RETRY_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return resp.read()
+        except Exception as exc:
+            last_exc = exc
+            if attempt < RETRY_ATTEMPTS - 1:
+                delay = 2 ** attempt
+                print(f"  school calendar fetch failed ({exc}); retrying in {delay}s")
+                time.sleep(delay)
+    raise last_exc
+
+
+def _fetch_and_parse():
+    content = _fetch_ics()
 
     cal = icalendar.Calendar.from_ical(content)
 
@@ -92,13 +108,20 @@ def _fetch_and_parse():
 
 def get_calendar():
     today = date.today()
-    if CACHE_FILE.exists():
-        cache = json.loads(CACHE_FILE.read_text())
+    cache = json.loads(CACHE_FILE.read_text()) if CACHE_FILE.exists() else None
+    if cache:
         fetched = date.fromisoformat(cache.get("fetched_at", "2000-01-01"))
         if (today - fetched).days < CACHE_DAYS:
             return cache
+
     print("Refreshing school calendar cache...")
-    data = _fetch_and_parse()
+    try:
+        data = _fetch_and_parse()
+    except Exception as exc:
+        if cache:
+            print(f"  fetch failed ({exc}); falling back to stale cache from {cache.get('fetched_at')}")
+            return cache
+        raise
     cache = {"fetched_at": today.isoformat(), **data}
     CACHE_FILE.write_text(json.dumps(cache, indent=2))
     return cache

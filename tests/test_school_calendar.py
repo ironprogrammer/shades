@@ -115,6 +115,55 @@ class TestCacheBehaviour:
         saved = json.loads(cache_file.read_text())
         assert "fetched_at" in saved
 
+    def test_falls_back_to_stale_cache_on_fetch_failure(self, tmp_path, monkeypatch):
+        stale = {**MOCK_CAL, "fetched_at": "2000-01-01"}
+        cache_file = tmp_path / "school_calendar_cache.json"
+        cache_file.write_text(json.dumps(stale))
+        monkeypatch.setattr("school_calendar.CACHE_FILE", cache_file)
+
+        with patch("school_calendar._fetch_and_parse", side_effect=TimeoutError("x")):
+            result = get_calendar()
+
+        assert result["fetched_at"] == "2000-01-01"
+
+    def test_raises_on_failure_when_no_cache(self, tmp_path, monkeypatch):
+        cache_file = tmp_path / "school_calendar_cache.json"
+        monkeypatch.setattr("school_calendar.CACHE_FILE", cache_file)
+
+        with patch("school_calendar._fetch_and_parse", side_effect=TimeoutError("x")):
+            with pytest.raises(TimeoutError):
+                get_calendar()
+
+
+# ── _fetch_ics retry ──────────────────────────────────────────────────────────
+
+class TestFetchIcsRetry:
+    def _make_resp(self, body):
+        from unittest.mock import MagicMock
+        m = MagicMock()
+        m.read.return_value = body
+        m.__enter__ = lambda s: s
+        m.__exit__ = MagicMock(return_value=False)
+        return m
+
+    def test_retries_then_succeeds(self, monkeypatch):
+        from school_calendar import _fetch_ics
+        monkeypatch.setattr("school_calendar.time.sleep", lambda _: None)
+
+        body = b"BEGIN:VCALENDAR\nEND:VCALENDAR"
+        side_effects = [TimeoutError("x"), TimeoutError("x"), self._make_resp(body)]
+        with patch("urllib.request.urlopen", side_effect=side_effects) as m:
+            result = _fetch_ics()
+        assert m.call_count == 3
+        assert result == body
+
+    def test_raises_after_all_retries(self, monkeypatch):
+        from school_calendar import _fetch_ics
+        monkeypatch.setattr("school_calendar.time.sleep", lambda _: None)
+        with patch("urllib.request.urlopen", side_effect=TimeoutError("x")):
+            with pytest.raises(TimeoutError):
+                _fetch_ics()
+
 
 # ── keyword detection ─────────────────────────────────────────────────────────
 
