@@ -4,6 +4,7 @@ shade — CLI for Rollease Acmeda shade control.
 
 Usage:
   shade list                    # list all shades with index and current position
+  shade scenes                  # list all scenes with schedule and today's status
   shade battery                 # check battery levels (no email)
   shade battery --send          # check and email if any shade is below threshold
   shade <name|index> open       # move to fully open (0%)
@@ -165,6 +166,133 @@ def _send_alert(low_shades):
     print(f"Alert sent (id={response.get('id', 'unknown')}) for {len(low_shades)} shade(s).")
 
 
+# ── Scenes ────────────────────────────────────────────────────────────────────
+
+_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri"]
+_ALLDAYS  = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
+def _fmt_days(days):
+    if days == _WEEKDAYS:
+        return "M–F"
+    if set(days) == set(_ALLDAYS):
+        return "daily"
+    abbrev = {"mon": "M", "tue": "T", "wed": "W", "thu": "Th", "fri": "F", "sat": "Sa", "sun": "Su"}
+    return " ".join(abbrev.get(d, "?") for d in days)
+
+
+def _safe_should_run(mod, ctx):
+    try:
+        return bool(mod.should_run(ctx))
+    except Exception:
+        return True
+
+
+def cmd_scenes():
+    import importlib.util
+    import json
+    from datetime import date, datetime
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    ROOT = Path(__file__).parent
+    SCENES_DIR = ROOT / "scenes"
+    STATE_FILE = ROOT / "scheduler_state.json"
+    TZ = ZoneInfo(os.environ["TIMEZONE"])
+    now = datetime.now(TZ)
+    today = date.today().isoformat()
+    today_dow = now.strftime("%a").lower()
+
+    state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
+
+    weather = {}
+    today_is_school_day = True
+    try:
+        from weather import get_weather
+        weather = get_weather(os.environ.get("WEATHER_LAT", "0"), os.environ.get("WEATHER_LON", "0"))
+    except Exception:
+        pass
+    try:
+        from school_calendar import get_calendar, is_school_day as _is_school_day
+        today_is_school_day = _is_school_day(get_calendar(), now.date())
+    except Exception:
+        pass
+
+    real_ctx = {
+        "now": now,
+        "is_dst": bool(now.dst()),
+        "weather": weather,
+        "is_school_day": today_is_school_day,
+    }
+
+    def probe(high_f=65.0, school_day=True):
+        return {"now": now, "is_dst": False, "weather": {"high_f": high_f, "sunset": None}, "is_school_day": school_day}
+
+    scenes = []
+    for path in sorted(SCENES_DIR.glob("*.py")):
+        spec = importlib.util.spec_from_file_location(path.stem, path)
+        mod = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(mod)
+            scenes.append((path.stem, mod))
+        except Exception:
+            pass
+
+    def _scene_time_key(item):
+        sched = getattr(item[1], "SCHEDULE", {})
+        t = sched.get("time") or (sched.get("window") or ["99:99"])[0]
+        return t
+
+    scenes.sort(key=_scene_time_key)
+
+    print(f"\n{'Scene':<18} {'Time':<13} {'Temp':<6} {'Days':<7} {'Shades':>6}  Status")
+    print("-" * 62)
+
+    for name, mod in scenes:
+        schedule = getattr(mod, "SCHEDULE", {})
+        enabled = schedule.get("enabled", True)
+        shades = getattr(mod, "SHADES", [])
+        threshold = getattr(mod, "TEMP_THRESHOLD", None)
+        days = schedule.get("days", _ALLDAYS)
+        today_in_days = today_dow in days
+
+        if "time" in schedule:
+            time_str = schedule["time"]
+        elif "window" in schedule:
+            w = schedule["window"]
+            time_str = f"{w[0]}–{w[1]}"
+        else:
+            time_str = ""
+
+        temp_str = ""
+        temp_gates = False
+        if threshold is not None:
+            if _safe_should_run(mod, probe(high_f=999)) != _safe_should_run(mod, probe(high_f=-999)):
+                temp_gates = True
+                temp_str = f">{threshold}"
+            else:
+                temp_str = f"<{threshold}>"
+
+        school_sensitive = enabled and (
+            _safe_should_run(mod, probe(school_day=True)) != _safe_should_run(mod, probe(school_day=False))
+        )
+
+        if not enabled:
+            status = "\033[90m✗ disabled\033[0m"
+        elif state.get(name) == today:
+            status = "\033[32m● ran today\033[0m"
+        elif school_sensitive and today_in_days and not today_is_school_day:
+            status = "\033[33m◌ holiday\033[0m"
+        elif temp_gates and today_in_days and not _safe_should_run(mod, real_ctx):
+            status = "\033[33m◌ skipped\033[0m"
+        else:
+            status = "○"
+
+        print(f"{name:<18} {time_str:<13} {temp_str:<6} {_fmt_days(days):<7} {len(shades):>6}  {status}")
+
+    print()
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def parse_position(arg):
@@ -193,6 +321,10 @@ async def main():
     if args[0] == "battery":
         send = "--send" in args
         await cmd_battery(send)
+        return
+
+    if args[0] == "scenes":
+        cmd_scenes()
         return
 
     if not HUB_IP:
