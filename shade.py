@@ -90,7 +90,8 @@ async def cmd_move(hub, target, position):
         return
     for i, roller in matches:
         if not roller.online:
-            print(f"  [{i}] {roller.name} -> \033[33mSKIPPED (offline)\033[0m")
+            sig = f", {roller.signal} dBm" if roller.signal is not None else ""
+            print(f"  [{i}] {roller.name} -> \033[33mSKIPPED (offline{sig})\033[0m")
             continue
         await roller.move_to(position)
         print(f"  [{i}] {roller.name} -> {position}% closed")

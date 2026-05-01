@@ -34,7 +34,8 @@ async def move_shade(hub, name, position):
         print(f"  WARNING: roller '{name}' not found")
         return
     if not roller.online:
-        print(f"  {name} -> {_yellow('SKIPPED (offline)')}")
+        sig = f", {roller.signal} dBm" if roller.signal is not None else ""
+        print(f"  {name} -> {_yellow(f'SKIPPED (offline{sig})')}")
         return
     await roller.move_to(position)
     print(f"  {name} -> {position}% closed")
