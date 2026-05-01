@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 import os
+import sys
 from pathlib import Path
 
 import aiopulse2
@@ -8,6 +9,10 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent / ".env")
 HUB_IP = os.environ["HUB_IP"]
+
+
+def _yellow(s):
+    return f"\033[33m{s}\033[0m" if sys.stdout.isatty() else s
 
 
 class HubConnection:
@@ -29,7 +34,7 @@ async def move_shade(hub, name, position):
         print(f"  WARNING: roller '{name}' not found")
         return
     if not roller.online:
-        print(f"  {name} -> SKIPPED (offline)")
+        print(f"  {name} -> {_yellow('SKIPPED (offline)')}")
         return
     await roller.move_to(position)
     print(f"  {name} -> {position}% closed")

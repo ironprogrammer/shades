@@ -75,7 +75,7 @@ async def cmd_list(hub):
     for i, roller in rollers_indexed(hub):
         sig_str = f"{roller.signal}" if roller.signal is not None else "--"
         if not roller.online:
-            print(f"{i:<4} {roller.name:<30} {sig_str:>4}  \033[90m— offline —\033[0m")
+            print(f"{i:<4} {roller.name:<30} {sig_str:>4}  \033[33m— offline —\033[0m")
             continue
         pos = roller.closed_percent
         pct_str = f"{pos}%" if pos is not None else "N/A"
@@ -126,7 +126,7 @@ async def cmd_battery(send):
     print("-" * 52)
     for s in sorted(all_shades, key=lambda x: (not x["online"], x["battery_pct"] or 999)):
         if not s["online"]:
-            print(f"{s['idx']:<4} {s['name']:<30} \033[90m— offline —\033[0m")
+            print(f"{s['idx']:<4} {s['name']:<30} \033[33m— offline —\033[0m")
             continue
         flag = " <- LOW" if s in low else ""
         pct_str = f"{s['battery_pct']}%" if s["battery_pct"] is not None else "N/A"
