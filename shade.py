@@ -70,12 +70,16 @@ def _position_bar(pct):
 
 
 async def cmd_list(hub):
-    print(f"\n{'#':<4} {'Shade':<30} {'':10}  {'%':>4}")
-    print("-" * 52)
+    print(f"\n{'#':<4} {'Shade':<30} {'dBm':>4}  {'':10}  {'%':>4}")
+    print("-" * 58)
     for i, roller in rollers_indexed(hub):
+        sig_str = f"{roller.signal}" if roller.signal is not None else "--"
+        if not roller.online:
+            print(f"{i:<4} {roller.name:<30} {sig_str:>4}  \033[90m— offline —\033[0m")
+            continue
         pos = roller.closed_percent
         pct_str = f"{pos}%" if pos is not None else "N/A"
-        print(f"{i:<4} {roller.name:<30} {_position_bar(pos)}  {pct_str:>4}")
+        print(f"{i:<4} {roller.name:<30} {sig_str:>4}  {_position_bar(pos)}  {pct_str:>4}")
     print()
 
 
