@@ -89,6 +89,9 @@ async def cmd_move(hub, target, position):
         print(f"No shade found matching '{target}'. Run 'shade list' to see available shades.")
         return
     for i, roller in matches:
+        if not roller.online:
+            print(f"  [{i}] {roller.name} -> \033[33mSKIPPED (offline)\033[0m")
+            continue
         await roller.move_to(position)
         print(f"  [{i}] {roller.name} -> {position}% closed")
 
@@ -110,14 +113,21 @@ async def cmd_battery(send):
         if not roller.has_battery:
             continue
         pct = roller.battery_percent
-        entry = {"name": roller.name, "id": roller.id, "idx": index[roller.id], "battery_pct": pct, "battery_v": roller.battery}
+        entry = {
+            "name": roller.name, "id": roller.id, "idx": index[roller.id],
+            "battery_pct": pct, "battery_v": roller.battery,
+            "online": roller.online,
+        }
         all_shades.append(entry)
-        if pct is not None and pct < BATTERY_THRESHOLD:
+        if entry["online"] and pct is not None and pct < BATTERY_THRESHOLD:
             low.append(entry)
 
     print(f"\n{'#':<4} {'Shade':<30} {'':10}  {'%':>4}")
     print("-" * 52)
-    for s in sorted(all_shades, key=lambda x: (x["battery_pct"] or 999)):
+    for s in sorted(all_shades, key=lambda x: (not x["online"], x["battery_pct"] or 999)):
+        if not s["online"]:
+            print(f"{s['idx']:<4} {s['name']:<30} \033[90m— offline —\033[0m")
+            continue
         flag = " <- LOW" if s in low else ""
         pct_str = f"{s['battery_pct']}%" if s["battery_pct"] is not None else "N/A"
         print(f"{s['idx']:<4} {s['name']:<30} {_battery_bar(s['battery_pct'])}  {pct_str:>4}{flag}")
