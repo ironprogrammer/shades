@@ -41,7 +41,7 @@ async def with_hub(callback):
     await hub.rollers_known.wait()
     try:
         await callback(hub)
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
     finally:
         asyncio.create_task(hub.stop())
         while hub.running:
