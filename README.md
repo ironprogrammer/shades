@@ -1,6 +1,6 @@
 # shades <img width="200" height="200" alt="doge shades" src="https://github.com/user-attachments/assets/7bbc7bde-ff03-4331-854b-48497a322bf8" />
 
-Rollease Acmeda Pulse v2 automation for macOS — battery monitoring and scene-based shade control.
+Rollease Acmeda Automate Pulse 2 automation and CLI for macOS -- shade control, battery monitoring, and scene-based shade control.
 
 ## Features
 
@@ -11,17 +11,17 @@ Rollease Acmeda Pulse v2 automation for macOS — battery monitoring and scene-b
 
 ## Requirements
 
-- **Rollease Acmeda Pulse v2 hub** — connected to your local network. This hub is sold separately and pairs with Rollease Acmeda motorized shades. All communication is local (no cloud required).
-- **macOS** — cron and shell setup are macOS-oriented; Linux should work with minor adjustments
+- **Rollease Acmeda Pulse v2 hub** -- connected to your local network. This hub is sold separately and pairs with Rollease Acmeda motorized shades. All communication is local (no cloud required).
+- **macOS** -- cron and shell setup are macOS-oriented; Linux should work with minor adjustments
 - **Python 3.9+**
 
 ## Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `shade.py` | CLI entry point — shade control and battery checks (see Shade CLI below) |
-| `scheduler.py` | Scene orchestrator — runs every 5 min via cron, fires scenes whose conditions match |
-| `scenes/` | Individual automation scenes (add/remove freely) |
+| `shade.py` | CLI entry point -- shade control and battery checks |
+| `scheduler.py` | Scene orchestrator -- runs via cron, fires scenes whose conditions match |
+| `scenes/` | Individual automation scenes |
 
 ## Setup
 
@@ -37,33 +37,35 @@ shade list       # confirms hub connection
 shade battery    # confirms battery levels
 ```
 
-Then set up cron (see `cron-setup.txt`).
-
 ## Shade CLI
 
 Installed by `setup.sh` as a shell function. All shade control in one command:
 
 ```bash
-shade list               # list all shades — index, name, current position
+shade list               # list all shades -- index, name, current position
 shade battery            # check battery levels (no email)
-shade battery --send     # check and email if any shade is low (requires email vars in .env)
-shade "living" open      # partial name match, case-insensitive — moves all matches
-shade "deck right" close
-shade "office" 50        # 0 = open, 100 = closed
+shade battery --send     # check and email if any shade is low (requires Resend config in .env)
+shade "living" open      # partial name match, case-insensitive -- moves all matches
+shade "deck right" close # exact name match
+shade "office" 50        # percentage closed: 0 = open, 100 = closed
 shade 3 close            # use index from 'shade list' instead of name
+shade scenes             # list all scenes -- name, days, time, temp, status
+shade scenes "wake"      # activate scene by name, bypassing day/time config
 ```
 
-Index from `shade list` is based on hub registration order and is stable between runs.
+Index from `shade list` is based on hub registration order and should be stable between runs.
 
 ## Scene scheduler
 
-The scheduler loads every `.py` file in `scenes/` automatically. Each scene declares its own schedule and conditions — no changes to the scheduler needed when adding scenes.
+Each scene declares its own schedule and conditions. The scheduler loads every `.py` file in `scenes/` automatically, so there are no other changes needed when adding/removing scenes.
 
-`scenes/*.py` files are gitignored — your personal scenes (with real shade names) stay local.
+**Getting started**
 
-**Getting started** — copy an example scene and fill in your shade names:
+Copy an example scene and fill in your shade names:
 
 ```bash
+# get list of registered shade names
+shade list
 cp scenes/weekday_schedule.py.example scenes/my_morning.py
 ```
 
@@ -77,22 +79,22 @@ Three examples are included, each demonstrating a key feature:
 
 **Disable a scene** without deleting it: set `"enabled": False` in its `SCHEDULE`.
 
-**Scene structure** — `scenes/your_scene.py`:
+**Scene structure** -- `scenes/your_scene.py`:
 
 ```python
 SCHEDULE = {
     "enabled": True,
     "time": "09:00",                # fixed time trigger
-    # "window": ["16:30", "20:05"], # or a polling window (fires once per day when condition is met)
+    # "window": ["16:30", "20:05"], # use for a polling window (fires once per day when condition is met)
     "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
 }
 
 def should_run(ctx):
     # ctx keys:
-    #   now           — current datetime (timezone-aware)
-    #   is_dst        — bool, whether DST is currently active
-    #   is_school_day — bool, False on holidays, breaks, and during summer
-    #   weather       — dict: high_f (float), sunset (datetime)
+    #   now           - current datetime (timezone-aware)
+    #   is_dst        - bool, whether DST is currently active
+    #   is_school_day - bool, False on holidays, breaks, and during summer
+    #   weather       - dict: high_f (float), sunset (datetime)
     return True
 
 async def run(hub):
