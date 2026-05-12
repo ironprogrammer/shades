@@ -16,8 +16,8 @@ info() { echo -e "${DIM}  $1${NC}"; }
 ask()  { echo -e "\n${YELLOW}?${NC} $1"; }
 
 echo ""
-echo "shade — setup"
-echo "============="
+echo "shades — setup"
+echo "=============="
 
 
 # ── 1. Python ─────────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ echo "Shell setup"
 echo "-----------"
 
 CURRENT_SHELL=$(basename "$SHELL")
-SHADE_FN="shade() { $PYTHON $SCRIPT_DIR/shade.py \"\$@\"; }"
+SHADES_FN="shades() { $PYTHON $SCRIPT_DIR/shades.py \"\$@\"; }"
 
 if [ "$CURRENT_SHELL" = "zsh" ]; then
   SHELL_FILE="$HOME/.zshrc"
@@ -116,19 +116,19 @@ else
   warn "Unsupported shell: $CURRENT_SHELL"
   info "Add this line manually to your shell config:"
   echo ""
-  echo "    $SHADE_FN"
+  echo "    $SHADES_FN"
   echo ""
   SHELL_FILE=""
 fi
 
 if [ -n "$SHELL_FILE" ]; then
-  if grep -q "shade()" "$SHELL_FILE" 2>/dev/null; then
-    ok "shade function already in $SHELL_FILE"
+  if grep -q "shades()" "$SHELL_FILE" 2>/dev/null; then
+    ok "shades function already in $SHELL_FILE"
   else
     echo "" >> "$SHELL_FILE"
-    echo "# shade CLI" >> "$SHELL_FILE"
-    echo "$SHADE_FN" >> "$SHELL_FILE"
-    ok "shade function added to $SHELL_FILE"
+    echo "# shades CLI" >> "$SHELL_FILE"
+    echo "$SHADES_FN" >> "$SHELL_FILE"
+    ok "shades function added to $SHELL_FILE"
     warn "Run 'source $SHELL_FILE' or open a new terminal to activate"
   fi
 fi
@@ -173,7 +173,7 @@ echo "============="
 echo -e "${GREEN}Setup complete.${NC}"
 echo ""
 echo "Next steps:"
-echo "  source $SHELL_FILE     # activate the shade command"
-echo "  shade list             # verify hub connection"
-echo "  shade battery          # check battery levels"
+echo "  source $SHELL_FILE     # activate the shades command"
+echo "  shades list            # verify hub connection"
+echo "  shades battery         # check battery levels"
 echo ""

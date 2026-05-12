@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-shade — CLI for Rollease Acmeda shade control.
+shades — CLI for Rollease Acmeda shade control.
 
 Usage:
-  shade list                    # list all shades with index and current position
-  shade scenes                  # list all scenes with schedule and today's status
-  shade scenes <scene_name>     # activate a scene now (ignores time/date gates)
-  shade battery                 # check battery levels (no email)
-  shade battery --send          # check and email if any shade is below threshold
-  shade <name|index> open       # move to fully open (0%)
-  shade <name|index> close      # move to fully closed (100%)
-  shade <name|index> <0-100>    # move to specific closed percent
+  shades list                    # list all shades with index and current position
+  shades scenes                  # list all scenes with schedule and today's status
+  shades scenes <scene_name>     # activate a scene now (ignores time/date gates)
+  shades battery                 # check battery levels (no email)
+  shades battery --send          # check and email if any shade is below threshold
+  shades <name|index> open       # move to fully open (0%)
+  shades <name|index> close      # move to fully closed (100%)
+  shades <name|index> <0-100>    # move to specific closed percent
 
 Name matching is case-insensitive and partial:
-  shade "living" open           # matches any shade containing "living"
-  shade 3 close                 # use index from 'shade list'
+  shades "living" open           # matches any shade containing "living"
+  shades 3 close                 # use index from 'shades list'
 
 Index is based on hub registration order and is stable between runs.
 """
@@ -86,7 +86,7 @@ async def cmd_list(hub):
 async def cmd_move(hub, target, position):
     matches = find_roller(hub, target)
     if not matches:
-        print(f"No shade found matching '{target}'. Run 'shade list' to see available shades.")
+        print(f"No shade found matching '{target}'. Run 'shades list' to see available shades.")
         return
     for i, roller in matches:
         if not roller.online:
@@ -355,7 +355,7 @@ async def cmd_run_scene(hub, name):
 
     mod = _load_scene(name)
     if mod is None:
-        print(f"No scene named '{name}'. Run 'shade scenes' to see available scenes.")
+        print(f"No scene named '{name}'. Run 'shades scenes' to see available scenes.")
         return
 
     ctx = _activation_context()

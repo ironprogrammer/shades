@@ -2,7 +2,7 @@ CRON SETUP — shades automation
 ================================
 
 Two separate cron jobs:
-  A) shade battery --send  — weekly battery alert (Saturday 8 AM)
+  A) shades battery --send  — weekly battery alert (Saturday 8 AM)
   B) scheduler.py  — scene orchestrator (every 5 min, 7 AM–8:55 PM)
 
 
@@ -22,8 +22,8 @@ ADDING THE CRONS
 
 Paste both lines (adjust paths and python as needed):
 
-  # Shade battery check — every Saturday at 8:00 AM
-  0 8 * * 6 /usr/bin/python3 /path/to/shades/shade.py battery --send >> /path/to/shades/shade.log 2>&1
+  # Shades battery check — every Saturday at 8:00 AM
+  0 8 * * 6 /usr/bin/python3 /path/to/shades/shades.py battery --send >> /path/to/shades/shades.log 2>&1
 
   # Scene scheduler — every 5 min, 7 AM to 8:55 PM
   */5 7-20 * * * /usr/bin/python3 /path/to/shades/scheduler.py >> /path/to/shades/scheduler.log 2>&1
@@ -48,17 +48,17 @@ The scheduler will skip it automatically. Re-enable by setting True.
 
 CHECKING LOGS
 -------------
-    tail -f /path/to/shades/shade.log
+    tail -f /path/to/shades/shades.log
     tail -f /path/to/shades/scheduler.log
 
 
 VERIFYING THE SETUP
 -------------------
 Battery check (no email):
-    shade battery
+    shades battery
 
 Test email delivery (requires email vars in .env):
-    shade battery --send
+    shades battery --send
 
 Inspect school calendar cache:
     python3 /path/to/shades/school_calendar.py

@@ -4,7 +4,7 @@ Rollease Acmeda Automate Pulse 2 automation and CLI for macOS -- shade control, 
 
 ## Features
 
-- `shade` CLI for direct control and battery level check for installed shades
+- `shades` CLI for direct control and battery level check for installed shades
 - custom scene scheduling (e.g. open bedroom shades at 7 AM)
 - "today's high" weather detection for better light/temperature control
 - holidays/days off/vacation detection to silence applicable scenes
@@ -19,7 +19,7 @@ Rollease Acmeda Automate Pulse 2 automation and CLI for macOS -- shade control, 
 
 | Script | Purpose |
 |--------|---------|
-| `shade.py` | CLI entry point -- shade control and battery checks |
+| `shades.py` | CLI entry point -- shade control and battery checks |
 | `scheduler.py` | Scene orchestrator -- runs via cron, fires scenes whose conditions match |
 | `scenes/` | Individual automation scenes |
 
@@ -33,27 +33,27 @@ Walks through dependencies, env var configuration, shell function install, and c
 
 After setup, open a new terminal (or `source ~/.zshrc`) and verify:
 ```bash
-shade list       # confirms hub connection
-shade battery    # confirms battery levels
+shades list       # confirms hub connection
+shades battery    # confirms battery levels
 ```
 
-## Shade CLI
+## Shades CLI
 
 Installed by `setup.sh` as a shell function. All shade control in one command:
 
 ```bash
-shade list               # list all shades -- index, name, current position
-shade battery            # check battery levels (no email)
-shade battery --send     # check and email if any shade is low (requires Resend config in .env)
-shade "living" open      # partial name match, case-insensitive -- moves all matches
-shade "deck right" close # exact name match
-shade "office" 50        # percentage closed: 0 = open, 100 = closed
-shade 3 close            # use index from 'shade list' instead of name
-shade scenes             # list all scenes -- name, days, time, temp, status
-shade scenes "wake"      # activate scene by name, bypassing day/time config
+shades list               # list all shades -- index, name, current position
+shades battery            # check battery levels (no email)
+shades battery --send     # check and email if any shade is low (requires Resend config in .env)
+shades "living" open      # partial name match, case-insensitive -- moves all matches
+shades "deck right" close # exact name match
+shades "office" 50        # percentage closed: 0 = open, 100 = closed
+shades 3 close            # use index from 'shades list' instead of name
+shades scenes             # list all scenes -- name, days, time, temp, status
+shades scenes "wake"      # activate scene by name, bypassing day/time config
 ```
 
-Index from `shade list` is based on hub registration order and should be stable between runs.
+Index from `shades list` is based on hub registration order and should be stable between runs.
 
 ## Scene scheduler
 
@@ -65,7 +65,7 @@ Copy an example scene and fill in your shade names:
 
 ```bash
 # get list of registered shade names
-shade list
+shades list
 cp scenes/weekday_schedule.py.example scenes/my_morning.py
 ```
 
