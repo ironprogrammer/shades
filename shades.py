@@ -146,18 +146,16 @@ async def cmd_battery(send):
             "online": roller.online,
         }
         all_shades.append(entry)
-        if entry["online"] and pct is not None and pct < BATTERY_THRESHOLD:
+        if pct is not None and pct < BATTERY_THRESHOLD:
             low.append(entry)
 
     print(f"\n{'#':<4} {'Shade':<30} {'':10}  {'%':>4}")
     print("-" * 52)
-    for s in sorted(all_shades, key=lambda x: (not x["online"], x["battery_pct"] or 999)):
-        if not s["online"]:
-            print(f"{s['idx']:<4} {s['name']:<30} \033[33m— offline —\033[0m")
-            continue
+    for s in sorted(all_shades, key=lambda x: x["battery_pct"] or 999):
         flag = " <- LOW" if s in low else ""
+        offline = "  \033[33moffline\033[0m" if not s["online"] else ""
         pct_str = f"{s['battery_pct']}%" if s["battery_pct"] is not None else "N/A"
-        print(f"{s['idx']:<4} {s['name']:<30} {_battery_bar(s['battery_pct'])}  {pct_str:>4}{flag}")
+        print(f"{s['idx']:<4} {s['name']:<30} {_battery_bar(s['battery_pct'])}  {pct_str:>4}{flag}{offline}")
     print()
 
     if not low or not send:
@@ -191,6 +189,7 @@ def _battery_bar(pct):
 def _send_alert(low_shades):
     lines = "\n".join(
         f"  • {s['name']}: {s['battery_pct']}% ({s['battery_v']}v)"
+        + ("  [reported offline — value may be stale]" if not s["online"] else "")
         for s in low_shades
     )
     body = (
