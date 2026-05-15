@@ -232,41 +232,20 @@ def _safe_should_run(mod, ctx):
 def cmd_scenes():
     import importlib.util
     import json
-    from datetime import date, datetime
+    from datetime import date
     from pathlib import Path
-    from zoneinfo import ZoneInfo
 
     ROOT = Path(__file__).parent
     SCENES_DIR = ROOT / "scenes"
     STATE_FILE = ROOT / "scheduler_state.json"
-    TZ = ZoneInfo(os.environ["TIMEZONE"])
-    now = datetime.now(TZ)
+
+    real_ctx, cal = _activation_context()
+    now = real_ctx["now"]
     today = date.today().isoformat()
     today_dow = now.strftime("%a").lower()
+    today_is_school_day = real_ctx["is_school_day"]
 
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
-
-    weather = {}
-    today_is_school_day = True
-    cal = None
-    try:
-        from weather import get_weather
-        weather = get_weather(os.environ.get("WEATHER_LAT", "0"), os.environ.get("WEATHER_LON", "0"))
-    except Exception:
-        pass
-    try:
-        from school_calendar import get_calendar, is_school_day as _is_school_day
-        cal = get_calendar()
-        today_is_school_day = _is_school_day(cal, now.date())
-    except Exception:
-        pass
-
-    real_ctx = {
-        "now": now,
-        "is_dst": bool(now.dst()),
-        "weather": weather,
-        "is_school_day": today_is_school_day,
-    }
 
     def probe(high_f=65.0, school_day=True):
         return {"now": now, "is_dst": False, "weather": {"high_f": high_f, "sunset": None}, "is_school_day": school_day}
@@ -288,28 +267,7 @@ def cmd_scenes():
 
     scenes.sort(key=_scene_time_key)
 
-    is_weekend = now.weekday() >= 5
-    high_f = weather.get("high_f")
-    sunset = weather.get("sunset")
-    high_str = f"{high_f:.0f}°F" if high_f is not None else "n/a"
-    sunset_str = sunset.strftime("%H:%M") if sunset is not None else "n/a"
-    dst_str = "yes" if now.dst() else "no"
-
-    if today_is_school_day:
-        holiday_str = "no"
-    else:
-        today_iso = now.date().isoformat()
-        if cal and today_iso in cal.get("no_school_dates", []):
-            reason = "calendar date"
-        elif cal:
-            reason = "out of session"
-        else:
-            reason = "calendar unavailable"
-        holiday_str = f"yes ({reason})"
-
-    print(f"\nToday:    {now.strftime('%a %Y-%m-%d')} ({'weekend' if is_weekend else 'weekday'})")
-    print(f"Weather:  high {high_str}, sunset {sunset_str}, DST {dst_str}")
-    print(f"Holiday:  {holiday_str}")
+    _print_runtime_diag(real_ctx, cal)
 
     print(f"\n{'Scene':<18} {'Time':<13} {'Temp':<6} {'Days':<7} {'Shades':>6}  Status")
     print("-" * 62)
@@ -360,6 +318,7 @@ def cmd_scenes():
 
 
 def _activation_context():
+    """Returns (ctx, cal) — ctx for scene should_run/run, cal for diag display."""
     from datetime import datetime
     from zoneinfo import ZoneInfo
 
@@ -367,6 +326,7 @@ def _activation_context():
     now = datetime.now(TZ)
     weather = {}
     is_school_day = True
+    cal = None
     try:
         from weather import get_weather
         weather = get_weather(os.environ.get("WEATHER_LAT", "0"), os.environ.get("WEATHER_LON", "0"))
@@ -374,15 +334,44 @@ def _activation_context():
         pass
     try:
         from school_calendar import get_calendar, is_school_day as _is_school_day
-        is_school_day = _is_school_day(get_calendar(), now.date())
+        cal = get_calendar()
+        is_school_day = _is_school_day(cal, now.date())
     except Exception:
         pass
-    return {
+    ctx = {
         "now": now,
         "is_dst": bool(now.dst()),
         "weather": weather,
         "is_school_day": is_school_day,
     }
+    return ctx, cal
+
+
+def _print_runtime_diag(ctx, cal):
+    now = ctx["now"]
+    weather = ctx["weather"]
+    is_weekend = now.weekday() >= 5
+    high_f = weather.get("high_f")
+    sunset = weather.get("sunset")
+    high_str = f"{high_f:.0f}°F" if high_f is not None else "n/a"
+    sunset_str = sunset.strftime("%H:%M") if sunset is not None else "n/a"
+    dst_str = "yes" if ctx["is_dst"] else "no"
+
+    if ctx["is_school_day"]:
+        holiday_str = "no"
+    else:
+        today_iso = now.date().isoformat()
+        if cal and today_iso in cal.get("no_school_dates", []):
+            reason = "calendar date"
+        elif cal:
+            reason = "out of session"
+        else:
+            reason = "calendar unavailable"
+        holiday_str = f"yes ({reason})"
+
+    print(f"\nToday:    {now.strftime('%a %Y-%m-%d')} ({'weekend' if is_weekend else 'weekday'})")
+    print(f"Weather:  high {high_str}, sunset {sunset_str}, DST {dst_str}")
+    print(f"Holiday:  {holiday_str}")
 
 
 def _load_scene(name):
@@ -408,13 +397,14 @@ async def cmd_run_scene(hub, name):
         print(f"No scene named '{name}'. Run 'shades scenes' to see available scenes.")
         return
 
-    ctx = _activation_context()
+    ctx, cal = _activation_context()
+    _print_runtime_diag(ctx, cal)
     try:
         mod.should_run(ctx)
     except Exception as exc:
         print(f"  WARNING: should_run() raised: {exc}")
 
-    print(f"Running scene: {name}")
+    print(f"\nRunning scene: {name}")
     try:
         await mod.run(hub)
     except Exception as exc:
