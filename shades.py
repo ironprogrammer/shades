@@ -4,6 +4,7 @@ shades — CLI for Rollease Acmeda shade control.
 
 Usage:
   shades list                    # list all shades with index and current position
+  shades hub                     # show hub info (firmware, RF version, model)
   shades scenes                  # list all scenes with schedule and today's status
   shades scenes <scene_name>     # activate a scene now (ignores time/date gates)
   shades battery                 # check battery levels (no email)
@@ -67,6 +68,33 @@ def _position_bar(pct):
         return "          "
     filled = round(pct / 10)
     return "█" * filled + "░" * (10 - filled)
+
+
+async def cmd_hub():
+    import json
+    import time
+    import websockets
+    from aiopulse2.devices import ssl_context
+
+    uri = f"wss://{HUB_IP}:443/rpc"
+    async with websockets.connect(uri, ssl=ssl_context) as ws:
+        await ws.send(json.dumps({"method": "shadow", "src": "app", "id": int(time.time())}))
+        msg = await asyncio.wait_for(ws.recv(), timeout=10)
+
+    data = json.loads(msg).get("result", {}).get("reported", {})
+    fw = data.get("firmware", {})
+    mfi = data.get("mfi", {})
+    shades_data = data.get("shades", {})
+    online = sum(1 for s in shades_data.values() if s.get("ol"))
+
+    print(f"\nName:          {data.get('name', '?')}")
+    print(f"Hub ID:        {data.get('hubId', '?')}")
+    print(f"MAC:           {data.get('mac', '?')}")
+    print(f"Model:         {mfi.get('model', '?')} ({mfi.get('manufacturer', '?')})")
+    print(f"Firmware:      {fw.get('version', '?')}")
+    print(f"RF firmware:   {fw.get('RFversion', '?')}")
+    print(f"Shades:        {online} online / {len(shades_data)} total")
+    print()
 
 
 async def cmd_list(hub):
@@ -451,6 +479,10 @@ async def main():
 
     if args[0] == "list":
         await with_hub(cmd_list)
+        return
+
+    if args[0] == "hub":
+        await cmd_hub()
         return
 
     if len(args) != 2:
