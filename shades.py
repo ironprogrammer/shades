@@ -102,12 +102,10 @@ async def cmd_list(hub):
     print("-" * 58)
     for i, roller in rollers_indexed(hub):
         sig_str = f"{roller.signal}" if roller.signal is not None else "--"
-        if not roller.online:
-            print(f"{i:<4} {roller.name:<30} {sig_str:>4}  \033[33m— offline —\033[0m")
-            continue
         pos = roller.closed_percent
         pct_str = f"{pos}%" if pos is not None else "N/A"
-        print(f"{i:<4} {roller.name:<30} {sig_str:>4}  {_position_bar(pos)}  {pct_str:>4}")
+        offline = "  \033[33moffline\033[0m" if not roller.online else ""
+        print(f"{i:<4} {roller.name:<30} {sig_str:>4}  {_position_bar(pos)}  {pct_str:>4}{offline}")
     print()
 
 
