@@ -223,6 +223,7 @@ def cmd_scenes():
 
     weather = {}
     today_is_school_day = True
+    cal = None
     try:
         from weather import get_weather
         weather = get_weather(os.environ.get("WEATHER_LAT", "0"), os.environ.get("WEATHER_LON", "0"))
@@ -230,7 +231,8 @@ def cmd_scenes():
         pass
     try:
         from school_calendar import get_calendar, is_school_day as _is_school_day
-        today_is_school_day = _is_school_day(get_calendar(), now.date())
+        cal = get_calendar()
+        today_is_school_day = _is_school_day(cal, now.date())
     except Exception:
         pass
 
@@ -260,6 +262,29 @@ def cmd_scenes():
         return t
 
     scenes.sort(key=_scene_time_key)
+
+    is_weekend = now.weekday() >= 5
+    high_f = weather.get("high_f")
+    sunset = weather.get("sunset")
+    high_str = f"{high_f:.0f}°F" if high_f is not None else "n/a"
+    sunset_str = sunset.strftime("%H:%M") if sunset is not None else "n/a"
+    dst_str = "yes" if now.dst() else "no"
+
+    if today_is_school_day:
+        holiday_str = "no"
+    else:
+        today_iso = now.date().isoformat()
+        if cal and today_iso in cal.get("no_school_dates", []):
+            reason = "calendar date"
+        elif cal:
+            reason = "out of session"
+        else:
+            reason = "calendar unavailable"
+        holiday_str = f"yes ({reason})"
+
+    print(f"\nToday:    {now.strftime('%a %Y-%m-%d')} ({'weekend' if is_weekend else 'weekday'})")
+    print(f"Weather:  high {high_str}, sunset {sunset_str}, DST {dst_str}")
+    print(f"Holiday:  {holiday_str}")
 
     print(f"\n{'Scene':<18} {'Time':<13} {'Temp':<6} {'Days':<7} {'Shades':>6}  Status")
     print("-" * 62)
