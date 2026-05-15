@@ -4,8 +4,9 @@ SCHEDULE = {
     "days": ["mon", "tue", "wed", "thu", "fri"],
 }
 
-SHADES = ["Your Shade Name"]
-POSITION = 0  # fully open
+SHADES = {
+    "Your Shade Name": 0,  # fully open
+}
 
 
 def should_run(ctx):
@@ -14,6 +15,5 @@ def should_run(ctx):
 
 
 async def run(hub):
-    from hub import move_shade
-    for shade in SHADES:
-        await move_shade(hub, shade, POSITION)
+    from hub import apply_shades
+    await apply_shades(hub, SHADES)

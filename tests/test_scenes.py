@@ -58,7 +58,7 @@ class TestWakeFull:
         assert not self.scene.should_run(make_ctx(TUESDAY, is_school_day=False))
 
     def test_moves_to_fully_open(self):
-        assert self.scene.POSITION == 0
+        assert set(self.scene.SHADES.values()) == {0}
 
     def test_fires_after_wake(self):
         assert self.scene.SCHEDULE["time"] == "07:45"
@@ -134,4 +134,4 @@ class TestEveningClose:
         assert set(self.scene.SCHEDULE["days"]) == {"mon","tue","wed","thu","fri","sat","sun"}
 
     def test_closes_fully(self):
-        assert self.scene.POSITION == 100
+        assert set(self.scene.SHADES.values()) == {100}

@@ -39,3 +39,16 @@ async def move_shade(hub, name, position):
         print(f"  {name} -> {position}% closed {_yellow(f'(reported offline{sig})')}")
     else:
         print(f"  {name} -> {position}% closed")
+
+
+async def apply_shades(hub, shades, position=None):
+    """Move a group of shades. `shades` is either a {name: position} dict or
+    an iterable of names paired with a shared `position` argument."""
+    if isinstance(shades, dict):
+        items = list(shades.items())
+    else:
+        if position is None:
+            raise ValueError("position is required when shades is not a dict")
+        items = [(name, position) for name in shades]
+    for name, pos in items:
+        await move_shade(hub, name, pos)

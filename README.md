@@ -90,6 +90,13 @@ SCHEDULE = {
     "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
 }
 
+# Map each shade to its target position (0 = open, 100 = closed).
+# Different shades can hold different positions for fine-tuning.
+SHADES = {
+    "Your Shade Name": 50,
+    "Another Shade":   80,
+}
+
 def should_run(ctx):
     # ctx keys:
     #   now           - current datetime (timezone-aware)
@@ -99,8 +106,19 @@ def should_run(ctx):
     return True
 
 async def run(hub):
-    from hub import move_shade
-    await move_shade(hub, "Your Shade Name", 50)  # 0 = open, 100 = closed
+    from hub import apply_shades
+    await apply_shades(hub, SHADES)
+```
+
+If every shade in a scene moves to the same position, `SHADES` may also be a list paired with a shared `POSITION`:
+
+```python
+SHADES = ["Your Shade Name", "Another Shade"]
+POSITION = 50
+
+async def run(hub):
+    from hub import apply_shades
+    await apply_shades(hub, SHADES, position=POSITION)
 ```
 
 ## School/holidays calendar
