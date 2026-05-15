@@ -43,6 +43,7 @@ Installed by `setup.sh` as a shell function. All shade control in one command:
 
 ```bash
 shades list               # list all shades -- index, name, current position
+shades hub                # show hub info -- firmware, RF version, model
 shades battery            # check battery levels (no email)
 shades battery --send     # check and email if any shade is low (requires Resend config in .env)
 shades "living" open      # partial name match, case-insensitive -- moves all matches
