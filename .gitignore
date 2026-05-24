@@ -2,6 +2,7 @@
 *.log
 *.pyc
 *_cache.json
+.shades-cache.json
 scheduler_state.json
 __pycache__/
 .pytest_cache/
