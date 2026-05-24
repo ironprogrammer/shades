@@ -2,6 +2,7 @@
 import asyncio
 import os
 import sys
+import time
 from pathlib import Path
 
 import aiopulse2
@@ -28,27 +29,55 @@ class HubConnection:
             await asyncio.sleep(0.5)
 
 
-async def move_shade(hub, name, position):
-    roller = next((r for r in hub.rollers.values() if r.name == name), None)
-    if roller is None:
-        print(f"  WARNING: roller '{name}' not found")
-        return
-    await roller.move_to(position)
-    if not roller.online:
-        sig = f", {roller.signal} dBm" if roller.signal is not None else ""
-        print(f"  {name} -> {position}% closed {_yellow(f'(reported offline{sig})')}")
-    else:
-        print(f"  {name} -> {position}% closed")
+def _normalize(shades, position):
+    if isinstance(shades, dict):
+        return list(shades.items())
+    if position is None:
+        raise ValueError("position is required when shades is not a dict")
+    return [(name, position) for name in shades]
 
 
 async def apply_shades(hub, shades, position=None):
-    """Move a group of shades. `shades` is either a {name: position} dict or
-    an iterable of names paired with a shared `position` argument."""
-    if isinstance(shades, dict):
-        items = list(shades.items())
-    else:
-        if position is None:
-            raise ValueError("position is required when shades is not a dict")
-        items = [(name, position) for name in shades]
+    """Move a group of shades in a single batched WebSocket payload.
+
+    `shades` is either a {name: position} dict or an iterable of names paired
+    with a shared `position`. All shades resolved by name go out in one
+    `shadow` desired send — the hub's native group-dispatch path.
+    """
+    items = _normalize(shades, position)
+    if not items:
+        return
+
+    by_name = {r.name: r for r in hub.rollers.values()}
+    desired_shades = {}
+    resolved = []
     for name, pos in items:
-        await move_shade(hub, name, pos)
+        roller = by_name.get(name)
+        if roller is None:
+            print(f"  WARNING: roller '{name}' not found")
+            continue
+        desired_shades[roller.id] = {"movePercent": int(pos)}
+        resolved.append((name, pos, roller))
+
+    if not desired_shades:
+        return
+
+    await hub.send_payload({
+        "method": "shadow",
+        "args": {
+            "desired": {"shades": desired_shades},
+            "timeStamp": time.time(),
+        },
+    })
+
+    for name, pos, roller in resolved:
+        if not roller.online:
+            sig = f", {roller.signal} dBm" if roller.signal is not None else ""
+            print(f"  {name} -> {pos}% closed {_yellow(f'(reported offline{sig})')}")
+        else:
+            print(f"  {name} -> {pos}% closed")
+
+
+async def move_shade(hub, name, position):
+    """Move a single shade by name. Thin wrapper over apply_shades."""
+    await apply_shades(hub, {name: position})

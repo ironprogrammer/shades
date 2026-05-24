@@ -179,24 +179,26 @@ shadow update path, NOT a hub-side scene executor.
 Mitmproxy capture of the iOS App during a scene tap would confirm this
 definitively — left as a follow-up if needed.
 
-## What the original `aiopulse2`-based code missed
+## What `aiopulse2` itself uses
 
-`aiopulse2` only ever uses two payload shapes:
+`aiopulse2` only ever sends two payload shapes:
 
 1. `{"method": "shadow", "src": "app", "id": ts}` — get full state
 2. `{"method": "shadow", "args": {"desired": {"shades": {<one>: {"movePercent": N}}}, "timeStamp": ts}}` — set ONE shade
 
-So the project's old `apply_shades(hub, {...})` was looping over shades
-and calling `roller.move_to()` one at a time. **That's the inefficiency
-to fix.** The hub supports multi-shade desired payloads natively;
-sending them as one batched payload is the path that LinQ's docs call
-"the group logic in the hub."
+`Roller.move_to()` only ever sends form #2 (one shade per payload). The
+project's `hub.apply_shades()` bypasses that and calls
+`hub.send_payload()` directly with the multi-shade form — the path LinQ's
+docs call "the group logic in the hub." See
+`docs/SCENES_GROUP_REFACTOR.md`.
 
 `aiopulse2` also:
-- Trusts the unreliable `ol` field — treats `ol: false` as offline
+- Trusts the unreliable `ol` field — treats `ol: false` as offline.
+  We still read `roller.online` for display only ("(reported offline)"),
+  not to gate sends.
 - Doesn't surface any per-command failure for `shadow` desired sends
-  (none is sent by the hub; just poll `shadow` to detect changes)
-- Doesn't use `scenes` or `timers` methods at all
+  (none is sent by the hub; just poll `shadow` to detect changes).
+- Doesn't use `scenes` or `timers` methods at all.
 
 ## TCP/1487 ASCII (the LinQ tool's protocol)
 

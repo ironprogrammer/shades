@@ -28,6 +28,8 @@ import aiopulse2
 import resend
 from dotenv import load_dotenv
 
+from hub import HubConnection
+
 load_dotenv(Path(__file__).parent / ".env")
 
 HUB_IP            = os.environ.get("HUB_IP")
@@ -89,6 +91,7 @@ async def cmd_hub():
 
     print(f"\nName:          {data.get('name', '?')}")
     print(f"Hub ID:        {data.get('hubId', '?')}")
+    print(f"IP:            {HUB_IP}")
     print(f"MAC:           {data.get('mac', '?')}")
     print(f"Model:         {mfi.get('model', '?')} ({mfi.get('manufacturer', '?')})")
     print(f"Firmware:      {fw.get('version', '?')}")
@@ -98,12 +101,15 @@ async def cmd_hub():
 
 
 async def cmd_list(hub):
+    ctx, cal = _activation_context()
+    _print_runtime_diag(ctx, cal)
+
     print(f"\n{'#':<4} {'Shade':<30} {'dBm':>4}  {'':10}  {'%':>4}")
     print("-" * 58)
     for i, roller in rollers_indexed(hub):
         sig_str = f"{roller.signal}" if roller.signal is not None else "--"
         pos = roller.closed_percent
-        pct_str = f"{pos}%" if pos is not None else "N/A"
+        pct_str = f"{pos}%" if pos is not None else "—"
         offline = "  \033[33moffline\033[0m" if not roller.online else ""
         print(f"{i:<4} {roller.name:<30} {sig_str:>4}  {_position_bar(pos)}  {pct_str:>4}{offline}")
     print()
@@ -129,15 +135,34 @@ async def cmd_battery(send):
         print("Error: HUB_IP is not set. Add it to your .env file.")
         sys.exit(1)
 
-    hub = aiopulse2.Hub(hub_ip)
-    await hub.test(update_devices=True)
+    async with HubConnection() as hub:
+        # The initial `shadow` snapshot omits `vo` (voltage) for some rollers.
+        # aiopulse2 queues a per-roller `{"query": True}` follow-up that the
+        # heartbeat flushes every 2s; if the hub doesn't answer that round,
+        # it won't be re-queried (sent_details_request gates it for the hour).
+        # So one heartbeat cycle + a response window is all that's worth
+        # waiting for — beyond that, the reading isn't coming this run.
+        deadline = asyncio.get_event_loop().time() + 3.0
+        while asyncio.get_event_loop().time() < deadline:
+            pending = [
+                r for r in hub.rollers.values()
+                if r.devicetypeshort is None
+                or (r.has_battery and r.battery_percent is None)
+            ]
+            if not pending:
+                break
+            await asyncio.sleep(0.25)
 
-    index = {r.id: i for i, r in enumerate(hub.rollers.values(), 1)}
+        rollers = list(hub.rollers.values())
 
-    all_shades = []
+    index = {r.id: i for i, r in enumerate(rollers, 1)}
+
+    entries = []
     low = []
-    for roller in hub.rollers.values():
-        if not roller.has_battery:
+    for roller in rollers:
+        # Skip devices we know are not battery-powered (e.g. AC motors).
+        # Rollers we never got `vo` for are kept — devicetypeshort is None.
+        if roller.devicetypeshort is not None and not roller.has_battery:
             continue
         pct = roller.battery_percent
         entry = {
@@ -145,17 +170,23 @@ async def cmd_battery(send):
             "battery_pct": pct, "battery_v": roller.battery,
             "online": roller.online,
         }
-        all_shades.append(entry)
+        entries.append(entry)
         if pct is not None and pct < BATTERY_THRESHOLD:
             low.append(entry)
 
+    # Sort: known readings ascending; unknown rows at the bottom.
+    entries.sort(key=lambda e: (e["battery_pct"] is None, e["battery_pct"] or 0))
+
     print(f"\n{'#':<4} {'Shade':<30} {'':10}  {'%':>4}")
     print("-" * 52)
-    for s in sorted(all_shades, key=lambda x: x["battery_pct"] or 999):
+    for s in entries:
         flag = " <- LOW" if s in low else ""
         offline = "  \033[33moffline\033[0m" if not s["online"] else ""
-        pct_str = f"{s['battery_pct']}%" if s["battery_pct"] is not None else "N/A"
-        print(f"{s['idx']:<4} {s['name']:<30} {_battery_bar(s['battery_pct'])}  {pct_str:>4}{flag}{offline}")
+        if s["battery_pct"] is None:
+            print(f"{s['idx']:<4} {s['name']:<30} {'':10}  {'—':>4}{offline}")
+        else:
+            pct_str = f"{s['battery_pct']}%"
+            print(f"{s['idx']:<4} {s['name']:<30} {_battery_bar(s['battery_pct'])}  {pct_str:>4}{flag}{offline}")
     print()
 
     if not low or not send:
