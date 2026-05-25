@@ -116,17 +116,13 @@ async def cmd_list(hub):
 
 
 async def cmd_move(hub, target, position):
+    from hub import apply_shades
+
     matches = find_roller(hub, target)
     if not matches:
         print(f"No shade found matching '{target}'. Run 'shades list' to see available shades.")
         return
-    for i, roller in matches:
-        await roller.move_to(position)
-        if not roller.online:
-            sig = f", {roller.signal} dBm" if roller.signal is not None else ""
-            print(f"  [{i}] {roller.name} -> {position}% closed \033[33m(reported offline{sig})\033[0m")
-        else:
-            print(f"  [{i}] {roller.name} -> {position}% closed")
+    await apply_shades(hub, {roller.name: position for _, roller in matches})
 
 
 async def cmd_battery(send):

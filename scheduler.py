@@ -99,7 +99,7 @@ def _build_context(now):
 # ── Hub runner ────────────────────────────────────────────────────────────────
 
 async def _run_scenes(scenes, ctx):
-    from hub import HubConnection, move_shade
+    from hub import HubConnection
 
     async with HubConnection() as hub:
         for name, mod in scenes:
