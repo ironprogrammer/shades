@@ -12,7 +12,7 @@ For small fixes (typos, broken links, minor bugs), a PR is fine without an issue
 
 - Keep changes focused. One feature or fix per PR.
 - Update the README if your change affects setup, CLI usage, or scene authoring.
-- Make sure tests pass: `python3 -m pytest tests/ -v`
+- Make sure tests pass: `.venv/bin/python -m pytest tests/ -v`
 - Add tests for new behavior where it makes sense.
 
 ## Code style
