@@ -53,9 +53,12 @@ def _in_window(schedule, now):
         return False
 
     if "time" in schedule:
+        hhmm = schedule["time"]
+        if isinstance(hhmm, dict):
+            hhmm = hhmm["dst" if now.dst() else "std"]
         t = now.replace(
-            hour=int(schedule["time"][:2]),
-            minute=int(schedule["time"][3:]),
+            hour=int(hhmm[:2]),
+            minute=int(hhmm[3:]),
             second=0, microsecond=0,
         )
         return t <= now < t + timedelta(minutes=POLL_MINUTES)
