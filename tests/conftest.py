@@ -1,7 +1,6 @@
 """Shared fixtures and environment setup for all tests."""
 import os
 import sys
-from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -23,30 +22,3 @@ os.environ.setdefault("EMAIL_FROM", "test@example.com")
 os.environ.setdefault("EMAIL_TO", "test@example.com")
 
 TZ = ZoneInfo("America/Los_Angeles")
-
-
-def make_ctx(
-    dt: datetime,
-    high_f: float = 65.0,
-    sunset_hour: int = 20,
-    sunset_minute: int = 0,
-    is_school_day: bool = True,
-):
-    """Build a scheduler context dict for use in scene should_run() tests."""
-    sunset = dt.replace(hour=sunset_hour, minute=sunset_minute, second=0, microsecond=0)
-    return {
-        "now": dt,
-        "is_dst": bool(dt.dst()),
-        "weather": {"high_f": high_f, "sunset": sunset},
-        "is_school_day": is_school_day,
-    }
-
-
-def dst(year: int, month: int, day: int, hour: int = 12, minute: int = 0) -> datetime:
-    """Return a tz-aware datetime that falls within DST."""
-    return datetime(year, month, day, hour, minute, tzinfo=TZ)
-
-
-def std(year: int, month: int, day: int, hour: int = 12, minute: int = 0) -> datetime:
-    """Return a tz-aware datetime that falls outside DST (standard time)."""
-    return datetime(year, month, day, hour, minute, tzinfo=TZ)
