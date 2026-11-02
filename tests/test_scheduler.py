@@ -41,6 +41,19 @@ class TestInWindowFixedTime:
             assert _in_window(self.SCHEDULE, now), f"Should fire on day {now.strftime('%A')}"
 
 
+
+class TestInWindowDstAwareTime:
+    SCHEDULE = {"enabled": True, "time": {"dst": "11:00", "std": "10:00"}, "days": ["mon", "tue", "wed", "thu", "fri"]}
+
+    def test_uses_dst_time_in_summer(self):
+        assert _in_window(self.SCHEDULE, datetime(2026, 7, 7, 11, 0, tzinfo=TZ))
+        assert not _in_window(self.SCHEDULE, datetime(2026, 7, 7, 10, 0, tzinfo=TZ))
+
+    def test_uses_std_time_in_winter(self):
+        assert _in_window(self.SCHEDULE, datetime(2026, 12, 8, 10, 0, tzinfo=TZ))
+        assert not _in_window(self.SCHEDULE, datetime(2026, 12, 8, 11, 0, tzinfo=TZ))
+
+
 class TestInWindowPolling:
     SCHEDULE = {
         "enabled": True,

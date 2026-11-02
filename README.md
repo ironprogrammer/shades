@@ -86,6 +86,7 @@ Three examples are included, each demonstrating a key feature:
 SCHEDULE = {
     "enabled": True,
     "time": "09:00",                # fixed time trigger
+    # "time": {"dst": "10:00", "std": "09:00"}, # fixed time that differs between DST and standard time
     # "window": ["16:30", "20:05"], # use for a polling window (fires once per day when condition is met)
     "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
 }
