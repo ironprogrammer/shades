@@ -157,4 +157,4 @@ Today's high and sunset time are fetched from [Open-Meteo](https://open-meteo.co
 python3 -m pytest tests/ -v
 ```
 
-Tests cover scene logic, scheduler time-window matching, weather caching, and school calendar keyword detection. No network or hub connection required.
+Tests cover scheduler time-window matching, weather caching, and school calendar keyword detection. No network or hub connection required.
