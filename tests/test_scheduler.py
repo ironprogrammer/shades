@@ -1,9 +1,13 @@
 """Tests for scheduler.py — time/window matching and scene filtering."""
+import asyncio
 from datetime import datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
 
+import hub
+import scheduler
 from scheduler import _in_window
 from tests.conftest import TZ
 
@@ -84,3 +88,59 @@ class TestInWindowPolling:
     def test_fires_on_weekend(self):
         now = datetime(2026, 5, 2, 18, 0, tzinfo=TZ)  # Saturday
         assert _in_window(self.SCHEDULE, now)
+
+
+# ── main ──────────────────────────────────────────────────────────────────────
+
+FIXTURE_SCENES = Path(__file__).parent / "fixtures" / "scenes"
+
+
+class FakeHubConnection:
+    """Stands in for hub.HubConnection and records which scenes ran."""
+
+    def __init__(self):
+        self.ran = []
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+class FixedDatetime(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return datetime(2026, 7, 7, 12, 0, tzinfo=tz)
+
+
+class TestMain:
+    @pytest.fixture(autouse=True)
+    def setup(self, monkeypatch, tmp_path):
+        self.hub = FakeHubConnection()
+        self.ctx = {"is_school_day": True}
+        monkeypatch.setattr(scheduler, "SCENES_DIR", FIXTURE_SCENES)
+        monkeypatch.setattr(scheduler, "datetime", FixedDatetime)
+        monkeypatch.setattr(scheduler, "STATE_FILE", tmp_path / "state.json")
+        monkeypatch.setattr(scheduler, "_build_context", lambda now: self.ctx)
+        monkeypatch.setattr(hub, "HubConnection", lambda: self.hub)
+        monkeypatch.setattr(scheduler.asyncio, "sleep", self._no_sleep)
+
+    @staticmethod
+    async def _no_sleep(_seconds):
+        pass
+
+    def test_runs_only_enabled_scenes_that_pass_should_run(self):
+        # disabled.py is skipped, and broken.py raising in should_run doesn't block enabled.py
+        asyncio.run(scheduler.main())
+        assert self.hub.ran == ["enabled"]
+
+    def test_skips_scene_when_should_run_is_false(self):
+        self.ctx["is_school_day"] = False
+        asyncio.run(scheduler.main())
+        assert self.hub.ran == []
+
+    def test_fires_once_per_day(self):
+        asyncio.run(scheduler.main())
+        asyncio.run(scheduler.main())
+        assert self.hub.ran == ["enabled"]

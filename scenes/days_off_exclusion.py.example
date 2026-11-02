@@ -1,5 +1,5 @@
 SCHEDULE = {
-    "enabled": True,
+    "enabled": False,
     "time": "07:30",
     "days": ["mon", "tue", "wed", "thu", "fri"],
 }

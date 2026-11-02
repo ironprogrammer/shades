@@ -1,6 +1,7 @@
 SCHEDULE = {
-    "enabled": True,
+    "enabled": False,
     "time": "07:30",
+    # "time": {"dst": "07:30", "std": "07:00"},  # use instead to shift the time when DST ends
     "days": ["mon", "tue", "wed", "thu", "fri"],
 }
 

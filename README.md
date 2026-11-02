@@ -62,7 +62,7 @@ Each scene declares its own schedule and conditions. The scheduler loads every `
 
 **Getting started**
 
-Copy an example scene and fill in your shade names:
+Copy an example scene, fill in your shade names, and set `"enabled": True` (examples ship disabled):
 
 ```bash
 # get list of registered shade names
@@ -74,7 +74,7 @@ Three examples are included, each demonstrating a key feature:
 
 | Example | Feature |
 |---------|---------|
-| `weekday_schedule.py.example` | Basic timed weekday trigger |
+| `weekday_schedule.py.example` | Basic timed weekday trigger, with an optional DST/standard time split |
 | `weather_restriction.py.example` | Only runs when today's high exceeds a threshold |
 | `days_off_exclusion.py.example` | Skips holidays, breaks, and summer via school calendar |
 
@@ -157,4 +157,4 @@ Today's high and sunset time are fetched from [Open-Meteo](https://open-meteo.co
 python3 -m pytest tests/ -v
 ```
 
-Tests cover scheduler time-window matching, weather caching, and school calendar keyword detection. No network or hub connection required.
+Tests cover scheduler time-window matching, scene filtering and once-per-day firing against fixture scenes in `tests/fixtures/scenes/`, weather caching, and school calendar keyword detection. No network or hub connection required.
