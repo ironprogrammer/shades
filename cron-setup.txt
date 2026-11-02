@@ -8,8 +8,7 @@ Two separate cron jobs:
 
 PREREQUISITES
 -------------
-Find your Python path:
-    which python3
+Run ./setup.sh first. It creates the .venv that the cron jobs use.
 
 macOS note: cron may need Full Disk Access to run scripts.
 If jobs silently fail:
@@ -20,13 +19,13 @@ ADDING THE CRONS
 ----------------
     crontab -e
 
-Paste both lines (adjust paths and python as needed):
+Paste both lines (adjust paths as needed):
 
   # Shades battery check — every Saturday at 8:00 AM
-  0 8 * * 6 /usr/bin/python3 /path/to/shades/shades.py battery --send >> /path/to/shades/shades.log 2>&1
+  0 8 * * 6 /path/to/shades/.venv/bin/python /path/to/shades/shades.py battery --send >> /path/to/shades/shades.log 2>&1
 
   # Scene scheduler — every 5 min, 7 AM to 8:55 PM
-  */5 7-20 * * * /usr/bin/python3 /path/to/shades/scheduler.py >> /path/to/shades/scheduler.log 2>&1
+  */5 7-20 * * * /path/to/shades/.venv/bin/python /path/to/shades/scheduler.py >> /path/to/shades/scheduler.log 2>&1
 
 
 REMOVING A CRON JOB
@@ -61,7 +60,7 @@ Test email delivery (requires email vars in .env):
     shades battery --send
 
 Inspect school calendar cache:
-    python3 /path/to/shades/school_calendar.py
+    /path/to/shades/.venv/bin/python /path/to/shades/school_calendar.py
 
 List active crons:
     crontab -l
@@ -80,7 +79,7 @@ Create ~/Library/LaunchAgents/com.yourname.shade-scheduler.plist:
   <string>com.yourname.shade-scheduler</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/python3</string>
+    <string>/path/to/shades/.venv/bin/python</string>
     <string>/path/to/shades/scheduler.py</string>
   </array>
   <key>StartInterval</key>

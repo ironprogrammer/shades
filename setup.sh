@@ -26,7 +26,13 @@ if ! command -v python3 &>/dev/null; then
   echo -e "${RED}✗${NC} python3 not found. Install it from https://python.org and re-run."
   exit 1
 fi
-PYTHON=$(command -v python3)
+
+# Rebuild the venv if its base interpreter is gone (e.g. removed by brew).
+VENV="$SCRIPT_DIR/.venv"
+if ! "$VENV/bin/python" --version &>/dev/null; then
+  python3 -m venv --clear "$VENV"
+fi
+PYTHON="$VENV/bin/python"
 PY_VER=$($PYTHON --version 2>&1)
 ok "Python: $PY_VER ($PYTHON)"
 
@@ -35,9 +41,7 @@ ok "Python: $PY_VER ($PYTHON)"
 
 echo ""
 echo "Installing dependencies..."
-$PYTHON -m pip install --quiet --break-system-packages \
-  aiopulse2 resend python-dotenv icalendar astral pytest 2>/dev/null \
-  || $PYTHON -m pip install --quiet aiopulse2 resend python-dotenv icalendar astral pytest
+$PYTHON -m pip install --quiet aiopulse2 resend python-dotenv icalendar astral pytest
 ok "Dependencies installed"
 
 
@@ -122,8 +126,13 @@ else
 fi
 
 if [ -n "$SHELL_FILE" ]; then
-  if grep -q "shades()" "$SHELL_FILE" 2>/dev/null; then
+  if grep -qF "$SHADES_FN" "$SHELL_FILE" 2>/dev/null; then
     ok "shades function already in $SHELL_FILE"
+  elif grep -q "shades()" "$SHELL_FILE" 2>/dev/null; then
+    warn "A different shades function is in $SHELL_FILE (or a file it sources). Replace it with:"
+    echo ""
+    echo "    $SHADES_FN"
+    echo ""
   else
     echo "" >> "$SHELL_FILE"
     echo "# shades CLI" >> "$SHELL_FILE"

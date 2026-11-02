@@ -140,7 +140,7 @@ If your district uses different wording, add keywords to `NO_SCHOOL_KEYWORDS` in
 
 Inspect the current cache:
 ```bash
-python3 school_calendar.py
+.venv/bin/python school_calendar.py
 ```
 
 ## Acknowledgements
@@ -154,7 +154,7 @@ Today's high and sunset time are fetched from [Open-Meteo](https://open-meteo.co
 ## Running tests
 
 ```bash
-python3 -m pytest tests/ -v
+.venv/bin/python -m pytest tests/ -v
 ```
 
 Tests cover scheduler time-window matching, scene filtering and once-per-day firing against fixture scenes in `tests/fixtures/scenes/`, weather caching, and school calendar keyword detection. No network or hub connection required.
